@@ -1,0 +1,25 @@
+FROM alpine
+
+RUN apk add -q build-base libevent libevent-dev openssl-dev zlib-dev
+RUN    mkdir /temp/dep -p \
+    && wget https://dist.torproject.org/tor-0.4.4.5.tar.gz -P /temp
+WORKDIR /temp
+
+RUN    tar xzf tor-0.4.4.5.tar.gz \
+    && cd tor-0.4.4.5 \
+    && export PATH=/usr/lib:$PATH \
+    && ./configure && make && make install \
+    && ldd /usr/local/bin/tor | awk '{ if($3 == "") print $1; else print $3;}' | xargs -I {} cp -u {} /temp/dep
+
+
+
+FROM scratch
+
+COPY --from=0 /temp/dep /lib
+COPY --from=0 /usr/local/bin /
+
+EXPOSE 9050
+
+ENTRYPOINT ["/tor"]
+
+
